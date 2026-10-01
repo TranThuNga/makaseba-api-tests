@@ -1,0 +1,560 @@
+{
+	"info": {
+		"_postman_id": "55781156-6471-4de9-9c55-317b45e4cf6f",
+		"name": "makaseba API tests (mẫu học automation)",
+		"description": "Bộ test API mẫu cho makaseba staging. Mỗi request có sẵn pm.test. Một số test CỐ Ý fail để minh họa 'test canh bug' — khi bug được sửa thì test sẽ pass.\n\nCÁCH DÙNG:\n1. Postman > Import > chọn file này.\n2. Chạy lần lượt từ request 01 (đăng ký sẽ lưu token tự động cho các request sau).\n3. Xem tab 'Test Results' ở mỗi response.\n4. Chạy cả bộ: bấm '...' trên collection > Run.\n\nBiến cấu hình ở tab Variables của collection: baseUrl, password, accessToken, agentId, datasourceId.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "58651226",
+		"_collection_link": "https://tranthunga2603-3696205.postman.co/workspace/Thu-Nga-Tr%25E1%25BA%25A7n's-Workspace~f72f0897-72f4-47fb-87fb-581bb68d96c7/collection/58651226-55781156-6471-4de9-9c55-317b45e4cf6f?action=share&source=collection_link&creator=58651226"
+	},
+	"item": [
+		{
+			"name": "01. Đăng ký - hợp lệ (lưu token)",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"// Tạo email mới mỗi lần chạy để không trùng",
+							"pm.collectionVariables.set('email', 'qa_' + Date.now() + '@example.com');"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Tạo tài khoản thành công (200/201)', function () {",
+							"  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+							"});",
+							"",
+							"var json = {};",
+							"try { json = pm.response.json(); } catch(e) {}",
+							"",
+							"pm.test('Response có access_token', function () {",
+							"  pm.expect(json).to.have.property('access_token');",
+							"});",
+							"",
+							"pm.test('Response KHÔNG lộ mật khẩu / hash', function () {",
+							"  var body = pm.response.text().toLowerCase();",
+							"  pm.expect(body).to.not.include('\"password\"');",
+							"  pm.expect(body).to.not.include('hash');",
+							"});",
+							"",
+							"// Lưu token cho các request sau",
+							"if (json.access_token) { pm.collectionVariables.set('accessToken', json.access_token); }"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"QA Test\",\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/auth/register",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"auth",
+						"register"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "02. Đăng ký - thiếu đồng ý điều khoản (REGRESSION bug E3)",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.collectionVariables.set('email', 'qa_noterms_' + Date.now() + '@example.com');"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"// Kỳ vọng ĐÚNG: server phải từ chối khi body không có trường đồng ý điều khoản.",
+							"// Hiện tại makaseba vẫn trả 201 -> test này FAIL = bug BUG-003 còn tồn tại.",
+							"// Khi dev thêm kiểm tra điều khoản ở server, test sẽ chuyển sang PASS.",
+							"pm.test('Server phải từ chối đăng ký thiếu đồng ý điều khoản (400/422)', function () {",
+							"  pm.expect(pm.response.code).to.be.oneOf([400, 422]);",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"QA NoTerms\",\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/auth/register",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"auth",
+						"register"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "03a. Đăng ký email chữ thường (chuẩn bị cho test trùng)",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.collectionVariables.set('dupEmail', 'dup_' + Date.now() + '@example.com');"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Tạo tài khoản gốc thành công', function () {",
+							"  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"Dup Lower\",\n  \"email\": \"{{dupEmail}}\",\n  \"password\": \"{{password}}\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/auth/register",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"auth",
+						"register"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "03b. Đăng ký trùng email khác HOA/thường (REGRESSION bug B7)",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"// Đổi dupEmail sang chữ HOA phần trước @ để thử trùng",
+							"var e = pm.collectionVariables.get('dupEmail');",
+							"var parts = e.split('@');",
+							"pm.collectionVariables.set('dupEmailUpper', parts[0].toUpperCase() + '@' + parts[1]);"
+						]
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"// Kỳ vọng ĐÚNG: coi là trùng, từ chối (409/400). Hiện tại tạo được -> FAIL = bug B7.",
+							"pm.test('Phải từ chối email trùng khác hoa/thường (409/400)', function () {",
+							"  pm.expect(pm.response.code).to.be.oneOf([409, 400, 422]);",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"Dup Upper\",\n  \"email\": \"{{dupEmailUpper}}\",\n  \"password\": \"{{password}}\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/auth/register",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"auth",
+						"register"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "04. Đăng nhập - đúng (lưu token)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Đăng nhập thành công (200)', function () {",
+							"  pm.response.to.have.status(200);",
+							"});",
+							"var json = {};",
+							"try { json = pm.response.json(); } catch(e) {}",
+							"pm.test('Có access_token', function () {",
+							"  pm.expect(json).to.have.property('access_token');",
+							"});",
+							"if (json.access_token) { pm.collectionVariables.set('accessToken', json.access_token); }"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/auth/login",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"auth",
+						"login"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "05. Đăng nhập - sai mật khẩu",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Phải bị từ chối (401)', function () {",
+							"  pm.expect(pm.response.code).to.be.oneOf([401, 400]);",
+							"});",
+							"pm.test('KHÔNG trả access_token khi sai mật khẩu', function () {",
+							"  var json = {}; try { json = pm.response.json(); } catch(e) {}",
+							"  pm.expect(json).to.not.have.property('access_token');",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"sai_mat_khau_123\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/auth/login",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"auth",
+						"login"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "06. Lấy danh sách agents - CÓ token",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Truy cập được khi có token (200)', function () {",
+							"  pm.response.to.have.status(200);",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{accessToken}}"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/agents",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"agents"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "07. Lấy danh sách agents - KHÔNG token (phải chặn)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"pm.test('Phải bị từ chối khi không có token (401/403)', function () {",
+							"  pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/agents",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"agents"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "08. Website source - chặn IP nội bộ 127.0.0.1 (cần datasourceId)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"// Cần điền agentId/datasourceId thật vào Variables trước khi chạy.",
+							"pm.test('Phải từ chối URL nội bộ 127.0.0.1 (400/422)', function () {",
+							"  pm.expect(pm.response.code).to.be.oneOf([400, 422]);",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{accessToken}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"url\": \"http://127.0.0.1\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/datasources/{{datasourceId}}/sources/url",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"datasources",
+						"{{datasourceId}}",
+						"sources",
+						"url"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "09. Website source - chặn hostname nội bộ nip.io (REGRESSION bug SSRF)",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"// Kỳ vọng ĐÚNG: cũng phải chặn hostname phân giải về IP nội bộ.",
+							"// Hiện tại makaseba trả 201 -> FAIL = bug BUG-005 (SSRF filter bypass) còn tồn tại.",
+							"pm.test('Phải từ chối hostname nội bộ 169.254.169.254.nip.io (400/422)', function () {",
+							"  pm.expect(pm.response.code).to.be.oneOf([400, 422]);",
+							"});"
+						]
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer {{accessToken}}"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"url\": \"http://169.254.169.254.nip.io/\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/datasources/{{datasourceId}}/sources/url",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"datasources",
+						"{{datasourceId}}",
+						"sources",
+						"url"
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"requests": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "https://makaseba-staging.trusted-ai.co"
+		},
+		{
+			"key": "password",
+			"value": "Test1234!a"
+		},
+		{
+			"key": "email",
+			"value": ""
+		},
+		{
+			"key": "dupEmail",
+			"value": ""
+		},
+		{
+			"key": "accessToken",
+			"value": ""
+		},
+		{
+			"key": "agentId",
+			"value": "DAN_VAO_AGENT_ID_CUA_BAN"
+		},
+		{
+			"key": "dupEmailUpper",
+			"value": ""
+		},
+		{
+			"key": "datasourceId",
+			"value": ""
+		}
+	]
+}
