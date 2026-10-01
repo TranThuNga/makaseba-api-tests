@@ -442,7 +442,7 @@
 						"datasources",
 						"{{datasourceId}}",
 						"sources",
-						"url"
+						"url" 
 					]
 				}
 			},
