@@ -1,7 +1,7 @@
 # makaseba – Automated Test Suite (QA Assessment)
 
 Bộ kiểm thử tự động cho sản phẩm **makaseba** (nền tảng chatbot RAG no-code của TrustedAI),
-xây dựng trong quá trình làm bài đánh giá vị trí QA/QC Lead.
+xây dựng trong quá trình làm bài đánh giá vị trí QA/QC.
 
 Mục tiêu: minh hoạ cách tiếp cận **automation + regression** cho cả tầng **API** lẫn tầng
 **chất lượng trả lời của AI**, chạy được ở máy local và **tự động hoá hoàn toàn trên CI**.
