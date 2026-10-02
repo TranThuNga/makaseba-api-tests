@@ -1,0 +1,31 @@
+name: AI Golden Set (kiem tra chat luong tra loi AI)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 1 * * *'
+
+jobs:
+  ai-goldenset:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Lay code ve
+        uses: actions/checkout@v4
+
+      - name: Cai Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Cai Newman + reporter
+        run: npm install -g newman newman-reporter-htmlextra
+
+      - name: Chay bo cau hoi AI
+        run: newman run makaseba_AI_goldenset.postman_collection.json -r cli,htmlextra --reporter-htmlextra-export report/ai-report.html
+
+      - name: Luu bao cao HTML
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-goldenset-report
+          path: report/
